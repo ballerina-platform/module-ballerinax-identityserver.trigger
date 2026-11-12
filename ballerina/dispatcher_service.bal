@@ -75,7 +75,7 @@ service class DispatcherService {
 
     resource function get .(http:Caller caller, http:Request request) returns error? {
         http:Response handshakeResponse = new;
-        if request.getQueryParamValue("hub.mode") is () || request.getQueryParamValue("hub.topic") is () {
+        if !(request.getQueryParamValue("hub.mode") == "subscribe" || request.getQueryParamValue("hub.mode") == "unsubscribe") || request.getQueryParamValue("hub.topic") is () {
             handshakeResponse.statusCode = http:STATUS_NOT_FOUND;
         } else {
             string? challenge = request.getQueryParamValue("hub.challenge");

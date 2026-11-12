@@ -27,7 +27,7 @@ public class Listener {
         if listenOn is http:Listener {
             self.httpListener = listenOn;
         } else {
-            self.httpListener = check new (listenOn);
+            self.httpListener = check new (listenOn, requestLimits = {maxEntityBodySize: 26214400});
         }
         self.listenerConfig = listenerConfig;
     }
@@ -60,12 +60,9 @@ public class Listener {
             }
             string path = self.attachments[i][0];
             DispatcherService dispatcher = self.dispatchers.get(path);
-            check dispatcher.removeServiceRef(serviceTypeStr);
-            _ = self.attachments.remove(i);
-            detached = true;
             boolean pathInUse = false;
-            foreach [string, GenericServiceType] attachment in self.attachments {
-                if attachment[0] == path {
+            foreach int j in 0 ..< self.attachments.length() {
+                if j != i && self.attachments[j][0] == path {
                     pathInUse = true;
                 }
             }
@@ -73,6 +70,9 @@ public class Listener {
                 check self.httpListener.detach(dispatcher);
                 _ = self.dispatchers.remove(path);
             }
+            check dispatcher.removeServiceRef(serviceTypeStr);
+            _ = self.attachments.remove(i);
+            detached = true;
         }
         if !detached {
             return error(string `Cannot detach the service of type ${serviceTypeStr}. Service has not been attached to the listener before`);
@@ -92,41 +92,44 @@ public class Listener {
     }
 
     private isolated function getServiceTypeStr(GenericServiceType serviceRef) returns string|error {
-        match serviceRef {
-            var v if v is LoginService => {
-                return "LoginService";
-            }
-            var v if v is RegistrationService => {
-                return "RegistrationService";
-            }
-            var v if v is TokenService => {
-                return "TokenService";
-            }
-            var v if v is SessionService => {
-                return "SessionService";
-            }
-            var v if v is CredentialService => {
-                return "CredentialService";
-            }
-            var v if v is UserService => {
-                return "UserService";
-            }
-            var v if v is ConsentService => {
-                return "ConsentService";
-            }
-            var v if v is ConsentPurposeService => {
-                return "ConsentPurposeService";
-            }
-            var v if v is RoleService => {
-                return "RoleService";
-            }
-            var v if v is OrganizationService => {
-                return "OrganizationService";
-            }
-            var _ => {
-                return error("Unrecognized service type attached to the listener");
-            }
+        string[] matched = [];
+        if serviceRef is LoginService {
+            matched.push("LoginService");
         }
+        if serviceRef is RegistrationService {
+            matched.push("RegistrationService");
+        }
+        if serviceRef is TokenService {
+            matched.push("TokenService");
+        }
+        if serviceRef is SessionService {
+            matched.push("SessionService");
+        }
+        if serviceRef is CredentialService {
+            matched.push("CredentialService");
+        }
+        if serviceRef is UserService {
+            matched.push("UserService");
+        }
+        if serviceRef is ConsentService {
+            matched.push("ConsentService");
+        }
+        if serviceRef is ConsentPurposeService {
+            matched.push("ConsentPurposeService");
+        }
+        if serviceRef is RoleService {
+            matched.push("RoleService");
+        }
+        if serviceRef is OrganizationService {
+            matched.push("OrganizationService");
+        }
+        if matched.length() == 1 {
+            return matched[0];
+        }
+        if matched.length() == 0 {
+            return error("Unrecognized service type attached to the listener");
+        }
+        return error(string `The service matches more than one service type (${string:'join(", ", ...matched)}). Implement one service type per service`);
     }
 
     private isolated function pathKey(string[]|string? attachPoint) returns string {
