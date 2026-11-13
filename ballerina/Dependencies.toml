@@ -358,9 +358,3 @@ modules = [
 	{org = "ballerinax", packageName = "identityserver.trigger", moduleName = "identityserver.trigger"}
 ]
 
-[[tool]]
-id = "asyncapi"
-org = "ballerina"
-name = "tool.asyncapi"
-version = "0.13.3"
-
